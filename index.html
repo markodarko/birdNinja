@@ -1,0 +1,260 @@
+<HTML>
+
+<style>
+canvas {
+	display:block;
+	background:grey;
+	user-select:none;
+	margin-top:10px;
+}
+*{
+	margin: 0;
+   	padding: 0;
+}
+</style>
+
+<center>
+<canvas id='gamewindow' width = '800' height = '800'></canvas>
+</center>
+
+<script>
+var canvas = document.getElementById('gamewindow')
+var ctx = canvas.getContext('2d')
+
+const PX_SIZE = 4
+const COLORS = {
+  white :['#d6fec8'],
+  black :['#000000','#062400','#093500'],
+  green :['#02c000','#2bc900','#2dd200'],
+  blue  :['#1fd7a4','#23dcc0','#2be9c8'],
+  yellow:['#feb200','#fec000','#fec900'],
+  red   :['#d60057','#df1366','#ee3481']
+}
+const NINJA_STAR = {
+w:4,
+0:
+'..0.'+
+'212.'+
+'.010'+
+'.2..'
+}
+
+const PLAYER = {
+w:8,
+poop:
+'.2......'+
+'..2222..'+
+'..202466'+
+'..224556'+
+'..2222..'+
+'11122211'+
+'.112221.'+
+'..2222..'+
+'6544.456'
+,
+0:
+'.2......'+
+'..2222..'+
+'..202466'+
+'..224556'+
+'..2222..'+
+'..2222..'+
+'11122211'+
+'.112221.'+
+'.554445.'
+,
+1:
+'........'+
+'.2......'+
+'..2222..'+
+'..202466'+
+'..224556'+
+'11122211'+
+'.112221.'+
+'..2222..'+
+'6544.456'
+,
+alt:
+'.2......'+
+'..2222..'+
+'..202466'+
+'..224556'+
+'..2299..'+
+'11188922'+
+'.117891.'+
+'..2778..'+
+'6544.456'
+
+}
+
+class Actor{
+  constructor(x,y,w,h){
+	this.x = x;
+	this.y = y;
+	this.w = w;
+	this.h = h;
+  }
+  boundsCheck(){
+	var returnValue = 2
+	if (this.x < 0)this.x=0
+	else if (this.x+this.w>canvas.width)this.x = canvas.width-this.w
+	else returnValue--
+	if (this.y < 0)this.y=0
+	else if (this.y+this.h>canvas.height)this.y = canvas.height-this.h
+	else returnValue--
+	return returnValue
+  }
+}
+class Star extends Actor{
+  constructor(){
+	super(200,200,2*PX_SIZE,2*PX_SIZE)
+	this.sprite = new Sprite(NINJA_STAR,COLORS.blue,4,4)
+	this.dead = true;
+	this.direction = {x:0,y:-1}
+	this.angle = 0;
+	this.speed = 0;
+  }
+  draw(){
+	if (this.dead) return;
+	ctx.save()
+	ctx.translate(this.x+this.sprite.offsetX,this.y+this.sprite.offsetY)
+	ctx.rotate(this.angle * (Math.PI/180))
+	this.angle += Math.floor(10 * this.speed)
+	if (this.angle > 360) this.angle = 0
+	this.sprite.draw(-this.sprite.offsetX,-this.sprite.offsetY)
+	
+	this.x += this.direction.x * Math.floor(this.speed)
+	this.y += this.direction.y * Math.floor(this.speed)
+	
+	this.speed = Math.max(this.speed-.1,0)
+	if(this.boundsCheck())this.speed = 0
+	//ctx.fillStyle='red'
+	//ctx.fillRect(-this.sprite.offsetX,-this.sprite.offsetY,this.w,this.h)
+	ctx.restore()
+	//ctx.fillStyle='blue'
+	//ctx.fillRect(this.x,this.y,this.w,this.h)
+	
+  }
+  setPosition(x,y){
+	this.x = x;
+	this.y = y;
+  }
+}
+class Player extends Actor{
+  constructor(){
+	super(canvas.width/2,canvas.height/2,3*PX_SIZE,3*PX_SIZE)
+	this.sprite = new Sprite(PLAYER,playerColor,12,20)
+	this.direction = {x:1,y:0};
+  }
+  draw(){
+	this.sprite.draw(this.x,this.y)
+	ctx.fillStyle = 'red'
+	ctx.fillRect(this.x+this.direction.x*28,this.y+this.direction.y*32,4,4)
+	//ctx.fillRect(this.x,this.y,this.w,this.h)
+  }
+}
+function cycleArray(array){
+	array.unshift(array.pop())
+	//array.push(array.shift())
+}
+
+class Sprite{
+  constructor(pattern,colors,offsetX,offsetY){
+	this.pattern = pattern;
+	this.colors = colors;
+	this.frame = 0;
+	this.w = pattern.w;
+	this.offsetX = offsetX;
+	this.offsetY = offsetY;
+  }
+  draw(x,y){
+	x -= this.offsetX;
+	y -= this.offsetY;
+	var row = 0
+	var img = this.pattern[this.frame]
+	for(let i=0; i<img.length; i++){
+	  var col = i%this.w
+   	  var num = img[i]
+	  if (col == 0 && i > 0) row++
+  	  if (num == '.') continue;
+  	  ctx.fillStyle = this.colors[num]
+  	  ctx.fillRect(x+col*PX_SIZE,y+row*PX_SIZE,PX_SIZE,PX_SIZE)
+	}
+  }
+}
+
+var playerColor = COLORS.white.concat(COLORS.black,COLORS.yellow,COLORS.blue)
+var player = new Player()
+var time = 0
+var charge = 0
+var stars = [new Star(),new Star(),new Star()]
+
+function displayCharge(){
+  if (buttons.z) charge = Math.min(charge+2,100)
+  //else charge = 0;
+  if (charge == 0)return 
+  if (charge == 100) ctx.fillStyle = 'yellow' 
+  else ctx.fillStyle = 'white'
+  ctx.fillRect(player.x-20,player.y-40,charge/2,4)
+
+}
+
+function loop(){
+requestAnimationFrame(loop)
+ctx.clearRect(0,0,canvas.width,canvas.height)
+displayCharge()
+const speed = 2
+var animSpeed = 30
+
+stars[0].draw()
+const Hmov = buttons.ArrowRight-buttons.ArrowLeft;
+const Vmov = buttons.ArrowDown-buttons.ArrowUp;
+
+if (Hmov!=0 || Vmov!=0){
+  animSpeed = 5
+  player.direction.x = Hmov;
+  player.direction.y = Vmov;
+}
+
+player.x += Hmov*speed
+player.y += Vmov*speed
+
+player.boundsCheck()
+player.draw()
+
+if (!buttons.z){
+  if (charge >= 20){;
+    stars[0].dead = false
+    stars[0].x=player.x
+    stars[0].y=player.y
+    stars[0].speed = Math.max(Math.ceil(charge*.1)*2,6)
+    stars[0].direction.x = player.direction.x
+    stars[0].direction.y = player.direction.y
+  }
+  charge = 0
+}
+time++
+if (time >= animSpeed){
+  player.sprite.frame += 1
+  player.sprite.frame %= 2
+  time = 0
+} 
+}
+
+var buttons = {z:0,a:0,ArrowRight:0,ArrowLeft:0,ArrowDown:0,ArrowUp:0}
+
+window.addEventListener('keydown', e=>{
+let name = e.key
+buttons[name] = 1
+
+})
+
+window.addEventListener('keyup', e=>{
+let name = e.key
+buttons[name] = 0
+
+})
+loop()
+//Remember to stay WILD ;-D :3 >XD
+</script>
+</HTML>
