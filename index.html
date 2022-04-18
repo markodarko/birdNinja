@@ -14,6 +14,7 @@ canvas {
 </style>
 
 <center>
+arrow keys to move, hold z to charge shuriken
 <canvas id='gamewindow' width = '800' height = '800'></canvas>
 </center>
 
@@ -119,7 +120,7 @@ class Star extends Actor{
 	ctx.save()
 	ctx.translate(this.x+this.sprite.offsetX,this.y+this.sprite.offsetY)
 	ctx.rotate(this.angle * (Math.PI/180))
-	this.angle += Math.floor(10 * this.speed)
+	this.angle += 5 * this.speed
 	if (this.angle > 360) this.angle = 0
 	this.sprite.draw(-this.sprite.offsetX,-this.sprite.offsetY)
 	
