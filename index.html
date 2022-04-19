@@ -42,6 +42,7 @@ w:4,
 
 const PLAYER = {
 w:8,
+frames:2,
 poop:
 '.2......'+
 '..2222..'+
@@ -96,14 +97,22 @@ class Actor{
 	this.h = h;
   }
   boundsCheck(){
-	var returnValue = 2
 	if (this.x < 0)this.x=0
 	else if (this.x+this.w>canvas.width)this.x = canvas.width-this.w
-	else returnValue--
 	if (this.y < 0)this.y=0
 	else if (this.y+this.h>canvas.height)this.y = canvas.height-this.h
-	else returnValue--
-	return returnValue
+  }
+  bounceCheckX(){
+	if (this.x < 0)this.x=0
+	else if (this.x+this.w>canvas.width)this.x = canvas.width-this.w
+	else return 0;
+	return 1;
+  }
+  bounceCheckY(){
+	if (this.y < 0)this.y=0
+	else if (this.y+this.h>canvas.height)this.y = canvas.height-this.h
+	else return 0;
+	return 1;
   }
 }
 class Star extends Actor{
@@ -128,7 +137,15 @@ class Star extends Actor{
 	this.y += this.direction.y * Math.floor(this.speed)
 	
 	this.speed = Math.max(this.speed-.1,0)
-	if(this.boundsCheck())this.speed = 0
+ 	
+	if(this.bounceCheckX()){
+		this.direction.x *=-1; 
+		this.speed *=.5
+	}
+	else if(this.bounceCheckY()){
+		this.direction.y *=-1; 
+		this.speed *=.5
+	}
 	//ctx.fillStyle='red'
 	//ctx.fillRect(-this.sprite.offsetX,-this.sprite.offsetY,this.w,this.h)
 	ctx.restore()
@@ -146,6 +163,32 @@ class Player extends Actor{
 	super(canvas.width/2,canvas.height/2,3*PX_SIZE,3*PX_SIZE)
 	this.sprite = new Sprite(PLAYER,playerColor,12,20)
 	this.direction = {x:1,y:0};
+	this.time = 0
+  }
+  update(){
+	const speed = 2
+	var animSpeed = 30
+
+	const Hmov = buttons.ArrowRight-buttons.ArrowLeft;
+	const Vmov = buttons.ArrowDown-buttons.ArrowUp;
+
+	if (Hmov!=0 || Vmov!=0){
+ 	  animSpeed = 5
+  	  this.direction.x = Hmov;
+  	  this.direction.y = Vmov;
+	}
+
+	this.x += Hmov*speed
+	this.y += Vmov*speed
+
+	this.boundsCheck()
+
+	this.time++
+	if (this.time >= animSpeed){
+ 	  player.sprite.frame += 1
+ 	  player.sprite.frame %= 2
+ 	  this.time = 0
+	} 
   }
   draw(){
 	this.sprite.draw(this.x,this.y)
@@ -165,6 +208,7 @@ class Sprite{
 	this.colors = colors;
 	this.frame = 0;
 	this.w = pattern.w;
+	this.maxframe = pattern.frames;
 	this.offsetX = offsetX;
 	this.offsetY = offsetY;
   }
@@ -182,45 +226,33 @@ class Sprite{
   	  ctx.fillRect(x+col*PX_SIZE,y+row*PX_SIZE,PX_SIZE,PX_SIZE)
 	}
   }
+  nextFrame(){
+	this.frame = this.maxframe%(this.frame+1)
+  }
 }
 
 var playerColor = COLORS.white.concat(COLORS.black,COLORS.yellow,COLORS.blue)
 var player = new Player()
-var time = 0
 var charge = 0
 var stars = [new Star(),new Star(),new Star()]
 
 function displayCharge(){
-  if (buttons.z) charge = Math.min(charge+2,100)
-  //else charge = 0;
-  if (charge == 0)return 
-  if (charge == 100) ctx.fillStyle = 'yellow' 
-  else ctx.fillStyle = 'white'
-  ctx.fillRect(player.x-20,player.y-40,charge/2,4)
+  if (buttons.z) charge = Math.min(charge+2,100);
+  if (charge == 0)return ;
+  if (charge == 100) ctx.fillStyle = 'yellow';
+  else ctx.fillStyle = 'white';
+  ctx.fillRect(player.x-20,player.y-40,charge/2,4);
 
 }
 
 function loop(){
 requestAnimationFrame(loop)
 ctx.clearRect(0,0,canvas.width,canvas.height)
+
+player.update()
+
 displayCharge()
-const speed = 2
-var animSpeed = 30
-
 stars[0].draw()
-const Hmov = buttons.ArrowRight-buttons.ArrowLeft;
-const Vmov = buttons.ArrowDown-buttons.ArrowUp;
-
-if (Hmov!=0 || Vmov!=0){
-  animSpeed = 5
-  player.direction.x = Hmov;
-  player.direction.y = Vmov;
-}
-
-player.x += Hmov*speed
-player.y += Vmov*speed
-
-player.boundsCheck()
 player.draw()
 
 if (!buttons.z){
@@ -228,18 +260,13 @@ if (!buttons.z){
     stars[0].dead = false
     stars[0].x=player.x
     stars[0].y=player.y
-    stars[0].speed = Math.max(Math.ceil(charge*.1)*2,6)
+    stars[0].speed = Math.ceil(charge*.1)*2  //Math.min(Math.ceil(charge*.1)*2,10)
     stars[0].direction.x = player.direction.x
     stars[0].direction.y = player.direction.y
   }
   charge = 0
 }
-time++
-if (time >= animSpeed){
-  player.sprite.frame += 1
-  player.sprite.frame %= 2
-  time = 0
-} 
+
 }
 
 var buttons = {z:0,a:0,ArrowRight:0,ArrowLeft:0,ArrowDown:0,ArrowUp:0}
