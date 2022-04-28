@@ -33,6 +33,7 @@ const COLORS = {
 }
 const NINJA_STAR = {
 w:4,
+frames:1,
 0:
 '..0.'+
 '212.'+
@@ -160,12 +161,14 @@ class Star extends Actor{
 }
 class Player extends Actor{
   constructor(){
+	var playerColor = COLORS.white.concat(COLORS.red,COLORS.yellow,COLORS.blue)
 	super(canvas.width/2,canvas.height/2,3*PX_SIZE,3*PX_SIZE)
 	this.sprite = new Sprite(PLAYER,playerColor,12,20)
 	this.direction = {x:1,y:0};
 	this.time = 0
   }
   update(){
+	//cycleArray(this.sprite.colors)
 	const speed = 2
 	var animSpeed = 30
 
@@ -185,8 +188,7 @@ class Player extends Actor{
 
 	this.time++
 	if (this.time >= animSpeed){
- 	  player.sprite.frame += 1
- 	  player.sprite.frame %= 2
+	  this.sprite.nextFrame()
  	  this.time = 0
 	} 
   }
@@ -227,14 +229,13 @@ class Sprite{
 	}
   }
   nextFrame(){
-	this.frame = this.maxframe%(this.frame+1)
+	this.frame = (this.frame+1) % this.maxframe
   }
 }
 
-var playerColor = COLORS.white.concat(COLORS.black,COLORS.yellow,COLORS.blue)
+
 var player = new Player()
 var charge = 0
-var stars = [new Star(),new Star(),new Star()]
 
 function displayCharge(){
   if (buttons.z) charge = Math.min(charge+2,100);
@@ -245,41 +246,57 @@ function displayCharge(){
 
 }
 
+class NinjaStars{
+  constructor(){
+    this.stars = [new Star(),new Star(),new Star()];
+    this.currentStar = 0;
+  }
+  update(){
+	if(this.currentStar > 2)return
+	if (!buttons.z){
+  	if (charge >= 20){;
+   	  this.stars[this.currentStar].dead = false
+  	  this.stars[this.currentStar].x=player.x
+    	  this.stars[this.currentStar].y=player.y
+    	  this.stars[this.currentStar].speed = Math.max(Math.ceil(charge*.1)*2,5) //Math.ceil(charge*.1)*2  
+    	  this.stars[this.currentStar].direction.x = player.direction.x
+    	  this.stars[this.currentStar].direction.y = player.direction.y
+	  this.currentStar++
+  	}
+ 	 charge = 0
+	}
+  }
+  draw(){
+	this.stars.forEach(star=>{
+	  star.draw();
+	})
+  }
+}
+var ninjaStars = new NinjaStars()
+
 function loop(){
 requestAnimationFrame(loop)
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
 player.update()
-
-displayCharge()
-stars[0].draw()
+if(ninjaStars.currentStar < 3) displayCharge()
+ninjaStars.update();
+ninjaStars.draw();
 player.draw()
-
-if (!buttons.z){
-  if (charge >= 20){;
-    stars[0].dead = false
-    stars[0].x=player.x
-    stars[0].y=player.y
-    stars[0].speed = Math.ceil(charge*.1)*2  //Math.min(Math.ceil(charge*.1)*2,10)
-    stars[0].direction.x = player.direction.x
-    stars[0].direction.y = player.direction.y
-  }
-  charge = 0
-}
 
 }
 
 var buttons = {z:0,a:0,ArrowRight:0,ArrowLeft:0,ArrowDown:0,ArrowUp:0}
 
 window.addEventListener('keydown', e=>{
-let name = e.key
-buttons[name] = 1
+
+buttons[e.key] = 1
 
 })
 
 window.addEventListener('keyup', e=>{
-let name = e.key
-buttons[name] = 0
+
+buttons[e.key] = 0
 
 })
 loop()
